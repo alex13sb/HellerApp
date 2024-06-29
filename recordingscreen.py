@@ -5,7 +5,7 @@ from kivy.clock import Clock
 from kivy.uix.boxlayout import BoxLayout
 import os
 import tempfile
-import shutil
+
 import librosa
 import pandas as pd
 from pydub import AudioSegment
@@ -22,7 +22,8 @@ import numpy as np
 class RecordingScreen(Screen):
     def __init__(self, **kwargs):
         super(RecordingScreen, self).__init__(**kwargs)
-        
+        self.selected_seconds = 21  # Standardwert für Sekunden
+        self.selected_model = 'pt16-m55013'  # Standardwert für Modell
         self.layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
         self.file_name_label = Label(text="No file selected", size_hint=(1, None), height=40)
@@ -57,13 +58,18 @@ class RecordingScreen(Screen):
         self.file_name_label.text = file_name
         self.audio_path = recorded_path
 
-        self.temp_dir = tempfile.mkdtemp(dir=os.getcwd())
-        Logger.info(f'temp dir created {self.temp_dir}')
+        session_folder = os.path.join(os.getcwd(), 'session_folder')
+        if not os.path.exists(session_folder):
+            os.makedirs(session_folder)
+
+        self.temp_dir = tempfile.mkdtemp(dir=session_folder)
+        Logger.info(f'Temporary directory created at {self.temp_dir}')
 
         threading.Thread(target=self.process_audio_file, args=(recorded_path, self.temp_dir)).start()
 
-    def process_audio_file(self, input_file, output_folder, template_name='pt16-m55013.wav'):
-        min_t_values = get_timestamps(input_file, template_name)
+    def process_audio_file(self, input_file, output_folder):
+        template_name = self.selected_model + ".wav" # BigBen Sound 
+        min_t_values = self.get_timestamps(input_file, template_name)
         
         if len(min_t_values) > 0:
             audio = AudioSegment.from_wav(input_file)
@@ -86,7 +92,9 @@ class RecordingScreen(Screen):
         self.delete_long_audio_files(output_folder)
         threading.Thread(target=self.generate_images).start()
 
-    def delete_long_audio_files(self, directory, max_duration=23):
+
+    def delete_long_audio_files(self, directory):
+        max_duration = self.selected_seconds + 2 # Puffer-Zeit 2 Sekunden
         for filename in os.listdir(directory):
             filepath = os.path.join(directory, filename)
             
@@ -122,6 +130,8 @@ class RecordingScreen(Screen):
     def go_to_analyze_screen(self, output_folder):
         analyze_screen = self.manager.get_screen('analyzescreen')
         analyze_screen.set_images_dir(output_folder)
+        analyze_screen.selected_model = self.selected_model
+        analyze_screen.temp_dir = self.temp_dir
         self.manager.current = 'analyzescreen'
 
 
@@ -145,45 +155,48 @@ class RecordingScreen(Screen):
 
 
     def on_leave(self, *args):
-        if hasattr(self, 'temp_dir'):
-            shutil.rmtree(self.temp_dir)
-            Logger.info(f"Temporary directory at {self.temp_dir} deleted")
+        self.analyse_button.disabled = True
+        self.animating = True
+        self._animate()
 
-        if hasattr(self, 'analysis_thread'):
-            self.analysis_thread.join()
-            Logger.info("Analysis thread joined")
 
-def get_timestamps(signal_name, template_name='pt16-m55013.wav', offset=0):
-    flims = (6000, 12000)
-    db_range = 80
-    template, fs_template = librosa.load(template_name, sr=None)
-    audio, fs_audio = librosa.load(signal_name, sr=None)
-    Sxx_template, _, _, _ = sound.spectrogram(template, fs_template)
-    Sxx_template = util.power2dB(Sxx_template, db_range)
-    Sxx_audio, tn, fn, ext = sound.spectrogram(audio, fs_audio)
-    Sxx_audio = util.power2dB(Sxx_audio, db_range)
-    peak_th = 0.75
-    xcorrcoef, rois = template_matching(Sxx_audio, Sxx_template, tn, ext, peak_th)
-    rois['min_f'] = flims[0]
-    rois['max_f'] = flims[1]
-    rois_df = pd.DataFrame(rois)
-    aggregated_rois = aggregate(rois_df)
-    min_t_values = aggregated_rois['min_t'].values + offset
-    if len(min_t_values) > 1:
-        min_t_values = min_t_values[:-1]
-    else:
-        min_t_values = []
-    return min_t_values
+    def aggregate(self, rois_df):
+        window = self.selected_seconds
+        aggregated = []
+        current_group = rois_df.iloc[0].copy()
+        for index, row in rois_df.iterrows():
+            if row['peak_time'] <= current_group['peak_time'] + window:
+                current_group['xcorrcoef'] = max(current_group['xcorrcoef'], row['xcorrcoef'])
+                current_group['max_t'] = max(current_group['max_t'], row['max_t'])
+            else:
+                aggregated.append(current_group)
+                current_group = row.copy()
+        aggregated.append(current_group)
+        return pd.DataFrame(aggregated)
+    
 
-def aggregate(rois_df, window=21):
-    aggregated = []
-    current_group = rois_df.iloc[0].copy()
-    for index, row in rois_df.iterrows():
-        if row['peak_time'] <= current_group['peak_time'] + window:
-            current_group['xcorrcoef'] = max(current_group['xcorrcoef'], row['xcorrcoef'])
-            current_group['max_t'] = max(current_group['max_t'], row['max_t'])
+    def get_timestamps(self, signal_name, template_name, offset=0):
+        flims = (6000, 12000)
+        db_range = 80
+        template, fs_template = librosa.load(template_name, sr=None)
+        audio, fs_audio = librosa.load(signal_name, sr=None)
+        Sxx_template, _, _, _ = sound.spectrogram(template, fs_template)
+        Sxx_template = util.power2dB(Sxx_template, db_range)
+        Sxx_audio, tn, fn, ext = sound.spectrogram(audio, fs_audio)
+        Sxx_audio = util.power2dB(Sxx_audio, db_range)
+        peak_th = 0.75
+        xcorrcoef, rois = template_matching(Sxx_audio, Sxx_template, tn, ext, peak_th)
+        rois['min_f'] = flims[0]
+        rois['max_f'] = flims[1]
+        rois_df = pd.DataFrame(rois)
+        aggregated_rois = self.aggregate(rois_df)
+        min_t_values = aggregated_rois['min_t'].values + offset
+        if len(min_t_values) > 1:
+            min_t_values = min_t_values[:-1]
         else:
-            aggregated.append(current_group)
-            current_group = row.copy()
-    aggregated.append(current_group)
-    return pd.DataFrame(aggregated)
+            min_t_values = []
+        return min_t_values
+
+
+
+
