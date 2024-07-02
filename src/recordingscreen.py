@@ -15,7 +15,9 @@ from kivy.uix.button import Button
 
 from kivy.logger import Logger
 import threading
-from matplotlib import pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -68,7 +70,9 @@ class RecordingScreen(Screen):
         threading.Thread(target=self.process_audio_file, args=(recorded_path, self.temp_dir)).start()
 
     def process_audio_file(self, input_file, output_folder):
-        template_name = self.selected_model + ".wav" # BigBen Sound 
+        current_working_directory = os.getcwd()
+        template_folder = os.path.join(current_working_directory, "templates")
+        template_name = os.path.join(template_folder, self.selected_model + ".wav")
         min_t_values = self.get_timestamps(input_file, template_name)
         
         if len(min_t_values) > 0:

@@ -10,3 +10,4 @@ class MainScreen(Screen):
 
     def change_screen(self, *args):
         self.manager.current = 'options'
+

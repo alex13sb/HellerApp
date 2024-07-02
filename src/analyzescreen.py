@@ -3,6 +3,7 @@ from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import numpy as np
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.models import load_model
@@ -13,7 +14,7 @@ import shutil
 class AnalyzeScreen(Screen):
     def __init__(self, **kwargs):
         super(AnalyzeScreen, self).__init__(**kwargs)
-        self.selected_model = 'pt16-m55013.h5'
+        self.selected_model = '../models/pt16-m55013.h5'
         self.temp_dir = ""
         self.predicted_data = []  # Liste für bestätigte Vorhersagen
 
@@ -30,7 +31,7 @@ class AnalyzeScreen(Screen):
         self.new_analysis_button = Button(
             text="Neue Analyse starten", size_hint=(1, None), height=50, disabled=True
         )
-        self.new_analysis_button.bind(on_press=self.go_to_options_screen)
+        self.new_analysis_button.bind(on_press=self.go_to_main_screen)
         self.layout.add_widget(self.new_analysis_button)
         
         # Button to confirm correct prediction
@@ -50,7 +51,9 @@ class AnalyzeScreen(Screen):
         Clock.schedule_once(self._predict_images, 0)
 
     def _predict_images(self, dt):
-        model_name = self.selected_model + ".h5"
+        current_working_directory = os.getcwd()
+        model_folder = os.path.join(current_working_directory, "models")
+        model_name = os.path.join(model_folder, self.selected_model + ".h5")
         Logger.info(f"model_name is {model_name}")
         model = load_model(model_name)
         all_class_labels = ['alu_nut', 'alu_ohne', 'kunststoff_nut', 'kunststoff_ohne', 'kunststoff_nut_NiO', 'kunststoff_ohne_NiO']
@@ -93,8 +96,8 @@ class AnalyzeScreen(Screen):
         # Speichern des aktualisierten Modells
         # Zum Beispiel: model.save('updated_model.h5')
 
-    def go_to_options_screen(self, instance):
+    def go_to_main_screen(self, instance):
         # Hier kannst du die markierten Vorhersagen dem Modell hinzufügen oder speichern
-        Logger.info("Markierte Vorhersagen werden dem Modell hinzugefügt oder gespeichert.")
+        Logger.info("Vorhersagen verworfen")
         shutil.rmtree(self.temp_dir)
         self.manager.current = 'main'

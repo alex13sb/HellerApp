@@ -62,8 +62,10 @@ class OptionsScreen(Screen):
             self.filechooser.opacity = 0
 
     def go_pressed(self, instance):
-        # check ob model überhaupt vorhanden
-        selected_model_file = self.spinner.text + ".h5"
+        current_working_directory = os.getcwd()
+        model_folder = os.path.join(current_working_directory, "models")
+        selected_model_file = os.path.join(model_folder, self.spinner.text + ".h5")
+        Logger.info(f"selected model_file is {selected_model_file}")
         if not os.path.exists(selected_model_file):
             self.show_model_not_found_popup()
             return
