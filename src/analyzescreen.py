@@ -56,7 +56,7 @@ class AnalyzeScreen(Screen):
         model_name = os.path.join(model_folder, self.selected_model + ".h5")
         Logger.info(f"model_name is {model_name}")
         model = load_model(model_name)
-        all_class_labels = ['alu_nut', 'alu_ohne', 'kunststoff_nut', 'kunststoff_ohne', 'kunststoff_nut_NiO', 'kunststoff_ohne_NiO']
+        all_class_labels = ['alu_nut_io', 'alu_ohne_io', 'kunststoff_nut_io', 'kunststoff_nut_nio', 'kunststoff_ohne_io', 'kunststoff_ohne_nio']
         
         result_text = ""
 
@@ -71,8 +71,12 @@ class AnalyzeScreen(Screen):
                 predicted_class = np.argmax(prediction, axis=1)
                 predicted_label = all_class_labels[predicted_class[0]]
                 
-                result_text += f"{img_file}: {predicted_label}\n"
-                self.predicted_data.append((img_file, predicted_label))
+                # Calculate percentages
+                prediction_percentages = prediction[0] * 100
+                percentages_text = ", ".join([f"{label}: {percent:.2f}%" for label, percent in zip(all_class_labels, prediction_percentages)])
+                
+                result_text += f"{img_file}: {predicted_label}\nWahrscheinlichkeiten: {percentages_text}\n"
+                self.predicted_data.append((img_file, predicted_label, prediction_percentages))
 
 
         self.predictions_label.text = f"Predictions:\n{result_text}"
