@@ -56,7 +56,7 @@ class AnalyzeScreen(Screen):
         model_name = os.path.join(model_folder, self.selected_model + ".h5")
         Logger.info(f"model_name is {model_name}")
         model = load_model(model_name)
-        all_class_labels = ['alu_nut_io', 'alu_ohne_io', 'kunststoff_nut_io', 'kunststoff_nut_nio', 'kunststoff_ohne_io', 'kunststoff_ohne_nio']
+        all_class_labels = ['alu_nut_io', 'alu_nut_nio', 'alu_ohne_io', 'alu_ohne_nio', 'kunststoff_nut_io', 'kunststoff_nut_nio', 'kunststoff_ohne_io', 'kunststoff_ohne_nio']
         
         result_text = ""
 

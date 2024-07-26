@@ -10,7 +10,7 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 import librosa
 from kivy.logger import Logger
-
+from kivy.uix.textinput import TextInput
 
 
 
@@ -28,20 +28,28 @@ class OptionsScreen(Screen):
 
         toggle_layout.add_widget(btn_live)
         toggle_layout.add_widget(btn_upload)
+        # Caption for model selection
+        model_selection_label = Label(text="Modellauswahl:", size_hint_y=None, height=30)
+        layout.add_widget(model_selection_label)
         self.spinner = Spinner(
             text='CNC Modell wählen',
-            values=('pt16-m55013', 'pt16-m58038'),
+            values=self.get_model_names(),
             size_hint=(None, None),
             size=(200, 44),
             pos_hint={'center_x': .5, 'center_y': .5})
         
-        self.slider = Slider(min=1, max=60, value=30)
-        slider_value = Label(text=f'Fräsbahnzeit in Sekunden (inklusive Start-Melodie): {int(self.slider.value)}')
-        self.slider.bind(value=lambda instance, 
-                         value: setattr(slider_value, 'text', f'Fräsbahnzeit in Sekunden (inklusive Start-Melodie): {int(value)}'))
+        self.seconds_input = TextInput(text='30', multiline=False, input_filter='int', size_hint=(None, None), size=(100, 44), pos_hint={'center_x': 0.5})
+        seconds_label = Label(text="Fräsbahnzeit in Sekunden (inklusive Start-Melodie):", size_hint_y=None, height=30)
+        increase_button = Button(text='+', size_hint=(None, None), size=(44, 44), on_press=lambda instance: self.update_seconds(1))
+        decrease_button = Button(text='-', size_hint=(None, None), size=(44, 44), on_press=lambda instance: self.update_seconds(-1))
+        seconds_box = BoxLayout(size_hint_y=None, height=50)
+        seconds_box.add_widget(decrease_button)
+        seconds_box.add_widget(self.seconds_input)
+        seconds_box.add_widget(increase_button)
+
         layout.add_widget(self.spinner)
-        layout.add_widget(slider_value)
-        layout.add_widget(self.slider)
+        layout.add_widget(seconds_label)
+        layout.add_widget(seconds_box)
         layout.add_widget(toggle_layout)
 
 
@@ -54,6 +62,16 @@ class OptionsScreen(Screen):
         layout.add_widget(go_button)
 
         self.add_widget(layout)
+
+    def get_model_names(self):
+        model_folder = os.path.join(os.getcwd(), "models")
+        model_files = [f[:-3] for f in os.listdir(model_folder) if f.endswith('.h5')]
+        return model_files
+    
+    def update_seconds(self, increment):
+        current_value = int(self.seconds_input.text)
+        new_value = max(0, current_value + increment)  # Prevent negative values
+        self.seconds_input.text = str(new_value)
 
     def on_toggle(self, instance):
         if instance.text == 'Upload' and instance.state == 'down':
