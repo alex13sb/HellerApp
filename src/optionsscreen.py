@@ -11,7 +11,7 @@ from kivy.uix.popup import Popup
 import librosa
 from kivy.logger import Logger
 from kivy.uix.textinput import TextInput
-
+import platform
 
 
 class OptionsScreen(Screen):
@@ -38,11 +38,11 @@ class OptionsScreen(Screen):
             size=(200, 44),
             pos_hint={'center_x': .5, 'center_y': .5})
         
-        self.seconds_input = TextInput(text='30', multiline=False, input_filter='int', size_hint=(None, None), size=(100, 44), pos_hint={'center_x': 0.5})
+        self.seconds_input = TextInput(text='30', multiline=False, input_filter='int', size=(200, 50), halign="center")
         seconds_label = Label(text="Fräsbahnzeit in Sekunden (inklusive Start-Melodie):", size_hint_y=None, height=30)
-        increase_button = Button(text='+', size_hint=(None, None), size=(44, 44), on_press=lambda instance: self.update_seconds(1))
-        decrease_button = Button(text='-', size_hint=(None, None), size=(44, 44), on_press=lambda instance: self.update_seconds(-1))
-        seconds_box = BoxLayout(size_hint_y=None, height=50)
+        increase_button = Button(text='+', size_hint=(None, None), size=(44, 50), on_press=lambda instance: self.update_seconds(1))
+        decrease_button = Button(text='-', size_hint=(None, None), size=(44, 50), on_press=lambda instance: self.update_seconds(-1))
+        seconds_box = BoxLayout(size_hint=(None, None), size=(200, 50), pos_hint={'center_x': 0.5})
         seconds_box.add_widget(decrease_button)
         seconds_box.add_widget(self.seconds_input)
         seconds_box.add_widget(increase_button)
@@ -53,7 +53,8 @@ class OptionsScreen(Screen):
         layout.add_widget(toggle_layout)
 
 
-        self.filechooser = FileChooserListView(size_hint=(1, 1), opacity=0)
+        documents_path = self.detectDocumentsFolder()
+        self.filechooser = FileChooserListView(path=documents_path, size_hint=(1, 1), opacity=0)
         self.filechooser.filters = ['*.wav', '!pagefile.sys', '!swapfile.sys', '!hiberfil.sys', '!*.tmp']
         layout.add_widget(self.filechooser)
 
@@ -100,6 +101,20 @@ class OptionsScreen(Screen):
             self.manager.current = 'recordingscreen'
         else: 
             self.no_file_selected_popup()
+    
+    def detectDocumentsFolder(self):
+        documents_path = ""
+        if platform.system() == 'Windows':
+            documents_path = os.path.join(os.path.expanduser('~'), 'Documents')
+        elif platform.system() == 'Darwin':  # macOS
+            documents_path = os.path.join(os.path.expanduser('~'), 'Documents')
+        elif platform.system() == 'Linux':
+            documents_path = os.path.join(os.path.expanduser('~'), 'Documents')
+        elif platform.system() == 'Android':
+            documents_path = '/storage/emulated/0/Documents'
+        else:
+            documents_path = os.path.expanduser('~')
+        return documents_path
 
 
     def show_model_not_found_popup(self):

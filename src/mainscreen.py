@@ -4,7 +4,7 @@ from kivy.uix.button import Button
 class MainScreen(Screen):
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
-        btn = Button(text="Analyse starten")
+        btn = Button(text="Klick um die Analyse zu starten")
         btn.bind(on_release=self.change_screen)
         self.add_widget(btn)
 
