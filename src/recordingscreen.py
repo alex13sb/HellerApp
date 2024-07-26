@@ -33,11 +33,12 @@ class RecordingScreen(Screen):
 
         self.progress = ProgressBar(max=100, value=0, size_hint=(1, None), height=20)
         self.layout.add_widget(self.progress)
-
         self.layout.add_widget(BoxLayout(size_hint=(1, 1)))
-
-        self.analyse_button = Button(text="Analyse starten", size_hint=(1, None), height=50, disabled=True)
+        self.finish_label = Label(text="Bahnen fertig geschnitten", size_hint=(1, None), height=40, opacity=0)
+        self.layout.add_widget(self.finish_label)
+        self.analyse_button = Button(text="Bahnen analysieren", size_hint=(1, None), height=50, disabled=True)
         self.layout.add_widget(self.analyse_button)
+
 
         self.add_widget(self.layout)
         self.animating = True
@@ -117,11 +118,10 @@ class RecordingScreen(Screen):
     def generate_images(self):
         output_dir = self.temp_dir
         counter = 1
-        bahn = "Bahn_"
         for filename in os.listdir(output_dir):
             if filename.endswith('.wav'):
                 filepath = os.path.join(output_dir, filename)
-                self.save_spectrogram_as_image(filepath, output_dir, bahn+str(counter))
+                self.save_spectrogram_as_image(filepath, output_dir, counter)
                 counter += 1
         Clock.schedule_once(self.enable_analyse_button, 0)
 
@@ -129,6 +129,7 @@ class RecordingScreen(Screen):
         self.analyse_button.disabled = False
         self.progress.value = 100
         self.stop_animation()
+        self.finish_label.opacity = 1
         self.analyse_button.bind(on_press=lambda instance: self.go_to_analyze_screen(self.temp_dir))
 
     def go_to_analyze_screen(self, output_folder):

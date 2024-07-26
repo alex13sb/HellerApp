@@ -18,8 +18,6 @@ class OptionsScreen(Screen):
     def __init__(self, **kwargs):
         super(OptionsScreen, self).__init__(**kwargs)
         layout = BoxLayout(orientation='vertical')
-
-
         toggle_layout = BoxLayout(size_hint_y=None, height=50)
         btn_live = ToggleButton(text='Live', group='mode', state='down')
         btn_upload = ToggleButton(text='Upload', group='mode')
@@ -96,7 +94,7 @@ class OptionsScreen(Screen):
             file_name = os.path.basename(selected_path)
             recording_screen = self.manager.get_screen('recordingscreen')
             recording_screen.set_audio_data(self.audio_data, self.sample_rate, file_name, selected_path)
-            recording_screen.selected_seconds = int(self.slider.value)
+            recording_screen.selected_seconds = int(self.seconds_input.text)
             recording_screen.selected_model = self.spinner.text
             self.manager.current = 'recordingscreen'
         else: 
