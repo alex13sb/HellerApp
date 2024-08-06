@@ -1,0 +1,8 @@
+kivy
+librosa
+pandas
+pydub
+maad
+matplotlib
+numpy
+tensorflow
