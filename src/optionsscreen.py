@@ -11,7 +11,7 @@ from kivy.uix.popup import Popup
 import platform
 from kivy.logger import Logger
 import librosa
-
+import sys
 class OptionsScreen(Screen):
     def __init__(self, **kwargs):
         super(OptionsScreen, self).__init__(**kwargs)
@@ -53,7 +53,7 @@ class OptionsScreen(Screen):
         model_manage_layout.add_widget(add_delete_layout)
         layout.add_widget(model_manage_layout)
 
-        self.seconds_input = TextInput(text='30', multiline=False, input_filter='int', size=(200, 50), halign="center")
+        self.seconds_input = TextInput(text='21', multiline=False, input_filter='int', size=(200, 50), halign="center")
         seconds_label = Label(text="Fräsbahnzeit in Sekunden (inklusive Start-Melodie):", size_hint_y=None, height=30)
         increase_button = Button(text='+', size_hint=(None, None), size=(44, 50), on_press=lambda instance: self.update_seconds(1))
         decrease_button = Button(text='-', size_hint=(None, None), size=(44, 50), on_press=lambda instance: self.update_seconds(-1))
@@ -81,7 +81,15 @@ class OptionsScreen(Screen):
         self.add_widget(layout)
 
     def get_model_names(self):
-        model_folder = os.path.join(os.getcwd(), "models")
+        if getattr(sys, 'frozen', False):
+            # Wenn die App als .exe läuft
+            base_path = sys._MEIPASS
+        else:
+            # Während der Entwicklung
+            base_path = os.path.abspath(".")
+        
+        model_folder = os.path.join(base_path, "src/models")
+        Logger.info(model_folder)
         model_files = [f[:-3] for f in os.listdir(model_folder) if f.endswith('.h5')]
         return model_files
 
@@ -113,15 +121,23 @@ class OptionsScreen(Screen):
             Logger.info(self.selected_path)
             popup.dismiss()
 
+
     def go_pressed(self, instance):
-        current_working_directory = os.getcwd()
-        model_folder = os.path.join(current_working_directory, "models")
+        if getattr(sys, 'frozen', False):
+            # Wenn die App als .exe läuft
+            base_path = sys._MEIPASS
+        else:
+            # Während der Entwicklung
+            base_path = os.path.dirname(os.path.abspath(__file__))
+        
+        model_folder = os.path.join(base_path, "models")
         selected_model_file = os.path.join(model_folder, self.spinner.text + ".h5")
         Logger.info(f"selected model_file is {selected_model_file}")
         
         if not os.path.exists(selected_model_file):
             self.show_model_not_found_popup()
             return
+
 
         if hasattr(self, 'selected_path') and self.selected_path:
             selected_path = self.selected_path
@@ -214,18 +230,27 @@ class OptionsScreen(Screen):
         
         popup.open()
 
+
     def confirm_delete_model(self, popup):
-        model_folder = os.path.join(os.getcwd(), "models")
+        # Prüfen, ob die App als .exe läuft
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.getcwd()
+
+        model_folder = os.path.join(base_path)
         selected_model_file = os.path.join(model_folder, self.spinner.text + ".h5")
+
         try:
             os.remove(selected_model_file)
             Logger.info(f"Deleted model file: {selected_model_file}")
-            self.spinner.values = self.get_model_names()
+            self.spinner.values = self.get_model_names()  # Aktualisiere die Spinner-Werte
             self.spinner.text = 'CNC Modell wählen'
             popup.dismiss()
         except Exception as e:
             Logger.error(f"Error deleting model file: {e}")
             self.show_error_popup(f"Fehler beim Löschen des Modells: {e}")
+
 
     def show_error_popup(self, error_message):
         content = BoxLayout(orientation='vertical')

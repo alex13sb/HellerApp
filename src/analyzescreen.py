@@ -11,11 +11,11 @@ from tensorflow.keras.models import load_model
 from kivy.clock import Clock
 from kivy.logger import Logger
 import shutil
-
+import sys
 class AnalyzeScreen(Screen):
     def __init__(self, **kwargs):
         super(AnalyzeScreen, self).__init__(**kwargs)
-        self.selected_model = '../models/pt16-m55013.h5'
+        self.selected_model = 'pt16-m55013.h5'#models/
         self.temp_dir = ""
         self.predicted_data = []  # Liste für bestätigte Vorhersagen
 
@@ -29,15 +29,6 @@ class AnalyzeScreen(Screen):
         self.new_analysis_button.bind(on_press=self.go_to_main_screen)
         self.button_layout.add_widget(self.new_analysis_button)
 
-        # Button to confirm correct prediction
-        self.confirm_button = Button(
-            text="Zum Modell hinzufügen",
-            size_hint=(1, 1),
-            disabled=True  # Starte deaktiviert, bis Vorhersagen geladen sind
-        )
-        self.confirm_button.bind(on_press=self.confirm_prediction)
-        self.button_layout.add_widget(self.confirm_button)
-
         self.layout.add_widget(self.button_layout)
         self.add_widget(self.layout)  # Hinzufügen des Layouts zum Screen
 
@@ -46,10 +37,16 @@ class AnalyzeScreen(Screen):
         Clock.schedule_once(self._predict_images, 0)
 
     def _predict_images(self, dt):
-        current_working_directory = os.getcwd()
-        model_folder = os.path.join(current_working_directory, "models")
-        model_name = os.path.join(model_folder, self.selected_model + ".h5")
+        # Prüfen, ob die App als .exe läuft
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.getcwd()
+
+        model_folder = os.path.join(base_path, "src/models")
+        model_name = os.path.join(model_folder,self.selected_model + ".h5") 
         Logger.info(f"model_name is {model_name}")
+
         model = load_model(model_name)
         all_class_labels = {
             0: 'Aluminium - Materialfehler, ohne Werkzeugfehler',
@@ -89,39 +86,20 @@ class AnalyzeScreen(Screen):
             percentages_text = ", ".join([f"{label}: {percent:.2f}%" for label, percent in zip(all_class_labels.values(), prediction_percentages)])
 
             # Create a layout for each prediction
-            prediction_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=30,spacing=10)
+            prediction_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=30, spacing=10)
             prediction_label = Label(text=display_text, halign='left', size_hint=(1, None), height=30)
-            radio_button = ToggleButton(group='bahn', size_hint=(None, None), height=20, halign='left')
-            
+
             prediction_layout.add_widget(prediction_label)
-            prediction_layout.add_widget(radio_button)
 
             self.layout.add_widget(prediction_layout)
-        
+
         # Add the button layout at the bottom again
         self.layout.add_widget(self.button_layout)
 
         self.new_analysis_button.disabled = False
-        self.confirm_button.disabled = False
 
 
 
-    def confirm_prediction(self, instance):
-        confirmed_predictions = self.predicted_data[:]  # Kopie der bestätigten Vorhersagen
-        Logger.info("User hat bestätigte Vorhersagen zum Modell hinzugefügt.")
-
-        self.incremental_learning(confirmed_predictions)
-
-    def incremental_learning(self, confirmed_predictions):
-        # Beispiel für inkrementelles Lernen: Dummy-Funktion, die das Modell mit bestätigten Daten aktualisiert
-        # Du musst diese Methode entsprechend deinem Modell und den bestätigten Daten implementieren
-        Logger.info("Starte inkrementelles Lernen mit bestätigten Daten...")
-
-        # Pseudo-Code: Du müsstest das Modell mit den neuen bestätigten Daten aktualisieren
-        # Zum Beispiel: model.fit(new_data_x, new_data_y)
-
-        # Speichern des aktualisierten Modells
-        # Zum Beispiel: model.save('updated_model.h5')
 
     def go_to_main_screen(self, instance):
         # Hier kannst du die markierten Vorhersagen dem Modell hinzufügen oder speichern

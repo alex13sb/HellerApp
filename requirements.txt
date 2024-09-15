@@ -6,3 +6,4 @@ maad
 matplotlib
 numpy
 tensorflow
+pywt
